@@ -67,15 +67,41 @@ class BaseScraper:
         except requests.exceptions.RequestException as e:
             raise self.DeepSeekAPIError(f"API request failed: {str(e)}")
 
-    def save_summary(self, summary, city, edition=""):
-        """Save summary as TXT file with date and edition"""
+    def save_summary(self, summary, city, edition):
+        """Save the summary as an HTML file."""
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Resumo - {city} - {edition}</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    line-height: 1.6;
+                }}
+                h1 {{
+                    color: #333;
+                }}
+                p {{
+                    color: #555;
+                    white-space: pre-wrap; /* Preserve whitespace and wrap text */
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>Resumo - {city} - {edition}</h1>
+            <p>{summary}</p>
+        </body>
+        </html>
+        """
         today = datetime.now().strftime("%Y-%m-%d")
-        os.makedirs(f"summaries/{city}", exist_ok=True)
-
-        filename = f"summaries/{city}/{today}"
+        filename = f"summaries/{city}/{today}"""
         if edition:
             filename += f"_{edition.replace(' ', '_').lower()}"
-        filename += ".txt"
-
+        filename += ".html"
         with open(filename, "w", encoding="utf-8") as f:
-            f.write(summary)
+            f.write(html_content)
+        print(f"Summary saved to {filename}")

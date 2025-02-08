@@ -1,9 +1,9 @@
 name: Run Porto Alegre Scraper
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual triggering
   schedule:
-    - cron: '0 0 * * *'  # Runs daily at midnight
+    - cron: '0 2 * * *'  # Runs daily at 02:00 UTC (23:00 Brazilian time)
 
 jobs:
   run-scraper:
@@ -27,3 +27,15 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python your_script.py
+
+      - name: Generate Index Page
+        run: |
+          python GenerateIndex.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git commit -m "Automated update of summaries and index page" || echo "No changes to commit"
+          git push
