@@ -1,0 +1,164 @@
+import io
+import json
+import re
+import time
+import random
+import pytz
+import openai
+import requests
+from datetime import datetime
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from PyPDF2 import PdfReader  # Ensure PyPDF2 is installed
+from scrapers.BaseScraper import BaseScraper
+
+class PortoAlegreScraper(BaseScraper):
+    def __init__(self, chatgpt_api_key):
+        super().__init__()
+        self.base_url = "https://www2.portoalegre.rs.gov.br/dopa/"
+        self.tz = pytz.timezone("America/Sao_Paulo")
+        self.chatgpt_api_key = chatgpt_api_key
+        openai.api_key = chatgpt_api_key  # Set the API key for OpenAI
+
+    def _extract_date_from_text(self, text):
+        """Extract date from visible link text (DD/MM/YYYY format)"""
+        date_pattern = r"\b(\d{1,2}/\d{1,2}/\d{4})\b"
+        match = re.search(date_pattern, text)
+        if match:
+            try:
+                return datetime.strptime(match.group(1), "%d/%m/%Y").date()
+            except ValueError:
+                pass
+        return None
+
+    def find_pdf_urls(self):
+        """
+        Find PDF URLs matching today's date in link text.
+        For debugging purposes, you can override today's date with a fixed date.
+        """
+
+        # Otherwise, use the current date:
+        today = datetime.now(self.tz).date()
+        print(f"\n[DEBUG] Current Date (America/Sao_Paulo): {today.strftime('%d/%m/%Y')}")
+
+        response = requests.get(self.base_url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        pdf_urls = []
+
+        print("[DEBUG] Found Links:")
+        for idx, link in enumerate(soup.find_all("a")):
+            link_text = link.text.strip()
+            href = link.get("href")
+
+            print(f"\nLink {idx + 1}:")
+            print(f"Text: '{link_text}'")
+            print(f"Href: '{href}'")
+
+            if not href or not href.lower().endswith(".pdf"):
+                print("Skipping: Not a PDF link")
+                continue
+
+            parsed_date = self._extract_date_from_text(link_text)
+            print(f"Parsed Date: {parsed_date} (vs Today: {today})")
+
+            if parsed_date == today:
+                absolute_url = urljoin(self.base_url, href)
+                print(f"✅ MATCH: Adding URL: {absolute_url}")
+                pdf_urls.append(absolute_url)
+            else:
+                print("❌ Date mismatch")
+
+        print(f"\n[DEBUG] Final PDF URLs: {pdf_urls}")
+        return pdf_urls
+
+    def fetch_pdf_content(self, url):
+        """Download the PDF file from the given URL"""
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.content
+
+    def extract_text(self, pdf_content):
+        """Extract text from PDF content using PyPDF2"""
+        reader = PdfReader(io.BytesIO(pdf_content))
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text
+        return text
+
+    def chatgpt_summarize(self, text, prompt):
+        # Combine the prompt instructions and the text into one user message.
+        combined_content = f"{prompt}\n\n{text}"
+        messages = [
+            {"role": "user", "content": combined_content}
+        ]
+
+        max_retries = 5
+        delay = 5
+
+        for attempt in range(max_retries):
+            try:
+                response = openai.chat.completions.create(
+                    model="o1-mini",
+                    messages=messages,
+                    temperature=1
+                )
+                # Access the message content using attribute notation
+                return response.choices[0].message.content.strip()
+            except openai.RateLimitError:
+                wait_time = delay * (2 ** attempt)  # Exponential backoff
+                print(f"Rate limit hit (attempt {attempt + 1}/{max_retries}). Sleeping for {wait_time} seconds...")
+                time.sleep(wait_time)
+            except openai.APIError as e:
+                print(f"OpenAI API Error: {str(e)}")
+                break
+            except Exception as e:
+                print(f"Unexpected error: {str(e)}")
+                break
+
+        raise RuntimeError("Failed to get a response from the ChatGPT API after multiple attempts.")
+
+    def run(self):
+        """Main execution flow using the OpenAI API for summarization"""
+        try:
+            pdf_urls = self.find_pdf_urls()
+            if not pdf_urls:
+                raise self.NoPdfFoundError(f"No PDF found for {datetime.now(self.tz).date()}")
+
+            for idx, url in enumerate(pdf_urls):
+                try:
+                    print(f"\n=== Processing PDF {idx + 1} ===")
+                    print(f"URL: {url}")
+
+                    # Process PDF content
+                    pdf_content = self.fetch_pdf_content(url)
+                    print(f"PDF Size: {len(pdf_content)} bytes")  # Verify download
+
+                    # Extract text
+                    text = self.extract_text(pdf_content)
+                    print(f"\nExtracted Text (First 200 chars):\n{text[:200]}...")
+                    print(f"Total Text Length: {len(text)} characters")
+
+                    # Generate summary
+                    print("\nCalling ChatGPT API (o1-mini)...")
+                    summary = self.chatgpt_summarize(
+                        text,
+                        "Você é um oficial do governo e seu cargo é analizar documentos da prefeitura de Porto Alegre. Resuma este diário oficial completo de forma que uma pessoa possa ler apenas o resumo e estar informada do seu conteúdo. Qualquer tipo de alteração de efetivo, contratação ou compra deve estar listada com valores, pesoas envolvidas e descrição. Preste muita atenção a precisão das informações.:"
+                    )
+                    print(f"\nGenerated Summary:\n{summary}")
+
+                    # Save summary
+                    edition = "Edição Extra" if "extra" in url.lower() else f"Edição {idx + 1}"
+                    self.save_summary(summary, "PortoAlegre", edition)
+
+                except Exception as e:
+                    raise self.DeepSeekAPIError(f"Error processing {url}: {str(e)}")
+
+            return True
+
+        except self.NoPdfFoundError:
+            raise
+
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error: {str(e)}")
