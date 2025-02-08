@@ -9,7 +9,7 @@ import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from PyPDF2 import PdfReader  # Ensure PyPDF2 is installed
+import pdfplumber
 from scrapers.BaseScraper import BaseScraper
 
 class PortoAlegreScraper(BaseScraper):
@@ -36,6 +36,9 @@ class PortoAlegreScraper(BaseScraper):
         Find PDF URLs matching today's date in link text.
         For debugging purposes, you can override today's date with a fixed date.
         """
+        # Uncomment the next two lines to use a fixed date for debugging
+        # fixed_date = datetime.strptime("07/02/2025", "%d/%m/%Y").date()
+        # today = fixed_date
 
         # Otherwise, use the current date:
         today = datetime.now(self.tz).date()
@@ -78,13 +81,11 @@ class PortoAlegreScraper(BaseScraper):
         return response.content
 
     def extract_text(self, pdf_content):
-        """Extract text from PDF content using PyPDF2"""
-        reader = PdfReader(io.BytesIO(pdf_content))
+        """Extract text from PDF content using pdfplumber"""
         text = ""
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text
+        with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text() + "\n"
         return text
 
     def chatgpt_summarize(self, text, prompt):
@@ -144,7 +145,10 @@ class PortoAlegreScraper(BaseScraper):
                     print("\nCalling ChatGPT API (o1-mini)...")
                     summary = self.chatgpt_summarize(
                         text,
-                        "Você é um oficial do governo e seu cargo é analizar documentos da prefeitura de Porto Alegre. Resuma este diário oficial completo de forma que uma pessoa possa ler apenas o resumo e estar informada do seu conteúdo. Qualquer tipo de alteração de efetivo, contratação ou compra deve estar listada com valores, pesoas envolvidas e descrição. Preste muita atenção a precisão das informações.:"
+                        "Você é um oficial do governo e seu cargo é analizar documentos da prefeitura de Porto Alegre. "
+                        "Resuma este diário oficial completo de forma que uma pessoa possa ler apenas o resumo e estar informada do seu conteúdo. "
+                        "Qualquer tipo de alteração de efetivo, contratação ou compra deve estar listada com valores, unidades, pesoas envolvidas e descrição. "
+                        "Preste muita atenção a precisão das informações, você é um agente do governo e não pode errar os resumos, revise-os múltiplas vezes. "
                     )
                     print(f"\nGenerated Summary:\n{summary}")
 
