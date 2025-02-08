@@ -1,74 +1,66 @@
 import os
+import yaml  # PyYAML precisa estar instalado: pip install pyyaml
+from datetime import datetime
 
-def generate_index(directory, output_file):
+def generate_index(directory, yaml_file):
     """
-    Generates an index.html file that lists all files in the given directory.
-    Links are generated relative to the root of the GitHub Pages site.
+    Updates the mkdocs.yml file to include all files in the given directory under the navigation menu,
+    formatting dates as DD/MM/YYYY and without modifying 'Apresentação'.
     """
-    # Ensure the directory exists
     if not os.path.exists(directory):
         raise FileNotFoundError(f"Directory not found: {directory}")
+    
+    # Get all Markdown files in the directory, excluding "index.md"
+    files = [f for f in os.listdir(directory) if f.endswith(".md") and f != "index.md"]
 
-    # Get all files in the directory
-    files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+    if not files:
+        print("No Markdown files found. Nothing to update.")
+        return
 
-    # Generate HTML content
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Sumários de Porto Alegre</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 20px;
-                line-height: 1.6;
-            }
-            h1 {
-                color: #333;
-            }
-            ul {
-                list-style-type: none;
-                padding: 0;
-            }
-            li {
-                margin: 10px 0;
-            }
-            a {
-                text-decoration: none;
-                color: #007BFF;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Sumários do Diário Oficial de Porto Alegre</h1>
-        <ul>
-    """
+    # Sort files alphabetically
+    files.sort()
 
-    # Add links to each file
-    for file in sorted(files):  # Sort files alphabetically
-        # Remove the "docs/" prefix from the directory path
-        relative_path = directory.replace("docs/", "", 1)
-        html_content += f'            <li><a href="{relative_path}/{file}">{file}</a></li>\n'
+    # Load existing mkdocs.yml content
+    if os.path.exists(yaml_file):
+        with open(yaml_file, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}  # Load YAML safely, defaulting to empty dict
+    else:
+        config = {}
 
-    html_content += """
-        </ul>
-    </body>
-    </html>
-    """
+    # Ensure 'nav' key exists
+    if "nav" not in config:
+        config["nav"] = []
 
-    # Save the generated HTML to the output file
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(html_content)
+    # Preserve existing entries, except "Diário oficial"
+    new_nav = []
+    diario_entries = []
 
-    print(f"Index file generated: {output_file}")
+    for item in config["nav"]:
+        # Remove apenas as antigas entradas de "Diário oficial"
+        if isinstance(item, dict) and any("Diário oficial" in key for key in item.keys()):
+            continue
+        new_nav.append(item)
 
-# Example usage
-summaries_dir = "docs/Summaries/PortoAlegre"
-index_file = "docs/index.html"
-generate_index(summaries_dir, index_file)
+    # Gerar novas entradas para "Diário oficial" com data formatada DD/MM/YYYY
+    for file in files:
+        try:
+            file_date = datetime.strptime(file[:-3], "%Y-%m-%d").strftime("%d/%m/%Y")
+            diario_entries.append({f"Diário oficial - {file_date}": f"{file}"})
+        except ValueError:
+            print(f"⚠️ Aviso: O arquivo '{file}' não segue o formato YYYY-MM-DD e foi ignorado.")
+
+    # Inserir novas entradas na navegação
+    new_nav.extend(diario_entries)
+
+    # Atualizar o config
+    config["nav"] = new_nav
+
+    # Escrever de volta no mkdocs.yml
+    with open(yaml_file, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+
+    print(f"Updated {yaml_file} with new Diário Oficial entries.")
+
+# Exemplo de uso
+yaml_file = "./mkdocs.yml"
+generate_index('./docs', yaml_file)

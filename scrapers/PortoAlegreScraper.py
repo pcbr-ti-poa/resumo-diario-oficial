@@ -31,18 +31,16 @@ class PortoAlegreScraper(BaseScraper):
                 pass
         return None
 
-    def find_pdf_urls(self):
+    def find_pdf_urls(self, date):
         """
-        Find PDF URLs matching today's date in link text.
-        For debugging purposes, you can override today's date with a fixed date.
+        Find PDF URLs matching the date
+
         """
         # Uncomment the next two lines to use a fixed date for debugging
         # fixed_date = datetime.strptime("07/02/2025", "%d/%m/%Y").date()
         # today = fixed_date
 
-        # Otherwise, use the current date:
-        today = datetime.now(self.tz).date()
-        print(f"\n[DEBUG] Current Date (America/Sao_Paulo): {today.strftime('%d/%m/%Y')}")
+        print(f"\n[DEBUG] Current Date (America/Sao_Paulo): {date.strftime('%d/%m/%Y')}")
 
         response = requests.get(self.base_url)
         soup = BeautifulSoup(response.text, "html.parser")
@@ -62,9 +60,9 @@ class PortoAlegreScraper(BaseScraper):
                 continue
 
             parsed_date = self._extract_date_from_text(link_text)
-            print(f"Parsed Date: {parsed_date} (vs Today: {today})")
+            print(f"Parsed Date: {parsed_date} (vs Date: {date})")
 
-            if parsed_date == today:
+            if parsed_date == date:
                 absolute_url = urljoin(self.base_url, href)
                 print(f"✅ MATCH: Adding URL: {absolute_url}")
                 pdf_urls.append(absolute_url)
@@ -121,11 +119,13 @@ class PortoAlegreScraper(BaseScraper):
         raise RuntimeError("Failed to get a response from the ChatGPT API after multiple attempts.")
 
     def run(self):
+        pages = []
+        date = datetime(2025, 2, 7).date()
         """Main execution flow using the OpenAI API for summarization"""
         try:
-            pdf_urls = self.find_pdf_urls()
+            pdf_urls = self.find_pdf_urls(date)
             if not pdf_urls:
-                raise self.NoPdfFoundError(f"No PDF found for {datetime.now(self.tz).date()}")
+                raise self.NoPdfFoundError(f"No PDF found for {date}")
 
             for idx, url in enumerate(pdf_urls):
                 try:
@@ -151,14 +151,11 @@ class PortoAlegreScraper(BaseScraper):
                         "Preste muita atenção a precisão das informações, você é um agente do governo e não pode errar os resumos, revise-os múltiplas vezes. "
                     )
                     print(f"\nGenerated Summary:\n{summary}")
-
-                    # Save summary
-                    edition = "Edição Extra" if "extra" in url.lower() else f"Edição {idx + 1}"
-                    self.save_summary(summary, "PortoAlegre", edition)
-
+                    pages.append(summary)
                 except Exception as e:
                     raise self.DeepSeekAPIError(f"Error processing {url}: {str(e)}")
-
+            joined_summary = "\n\n".join(pages)
+            self.save_summary(joined_summary, "PortoAlegre", date)
             return True
 
         except self.NoPdfFoundError:
