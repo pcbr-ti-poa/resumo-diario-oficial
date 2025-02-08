@@ -32,10 +32,6 @@ jobs:
         run: |
           python GenerateIndex.py
 
-      - name: Build mkdocs in HTML
-        run: |
-          mkdocs build
-
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Actions"
