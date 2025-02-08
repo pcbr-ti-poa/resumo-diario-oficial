@@ -3,6 +3,7 @@ import os
 def generate_index(directory, output_file):
     """
     Generates an index.html file that lists all files in the given directory.
+    Links are generated relative to the root of the GitHub Pages site.
     """
     # Ensure the directory exists
     if not os.path.exists(directory):
@@ -51,7 +52,9 @@ def generate_index(directory, output_file):
 
     # Add links to each file
     for file in sorted(files):  # Sort files alphabetically
-        html_content += f'            <li><a href="{directory}/{file}">{file}</a></li>\n'
+        # Remove the "docs/" prefix from the directory path
+        relative_path = directory.replace("docs/", "", 1)
+        html_content += f'            <li><a href="{relative_path}/{file}">{file}</a></li>\n'
 
     html_content += """
         </ul>
@@ -66,6 +69,6 @@ def generate_index(directory, output_file):
     print(f"Index file generated: {output_file}")
 
 # Example usage
-summaries_dir = "docs/summaries/PortoAlegre"
+summaries_dir = "docs/Summaries/PortoAlegre"
 index_file = "docs/index.html"
 generate_index(summaries_dir, index_file)
