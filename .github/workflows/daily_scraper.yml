@@ -1,7 +1,7 @@
 name: Run Porto Alegre Scraper
 
 on:
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:  # Allows manual triggering
   schedule:
     - cron: '0 2 * * *'  # Runs daily at 02:00 UTC (23:00 Brazilian time)
 
@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
@@ -28,9 +28,13 @@ jobs:
         run: |
           python your_script.py
 
-      - name: Generate Index Page
+      - name: Generate mkdocs
         run: |
           python GenerateIndex.py
+
+      - name: Build mkdocs in HTML
+        run: |
+          mkdocs build
 
       - name: Commit and push changes
         run: |
