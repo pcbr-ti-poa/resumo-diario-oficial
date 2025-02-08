@@ -98,7 +98,7 @@ class BaseScraper:
         </html>
         """
         today = datetime.now().strftime("%Y-%m-%d")
-        filename = f"summaries/{city}/{today}"""
+        filename = f"docs/summaries/{city}/{today}"""
         if edition:
             filename += f"_{edition.replace(' ', '_').lower()}"
         filename += ".html"

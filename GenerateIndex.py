@@ -66,6 +66,6 @@ def generate_index(directory, output_file):
     print(f"Index file generated: {output_file}")
 
 # Example usage
-summaries_dir = "summaries/PortoAlegre"
+summaries_dir = "docs/summaries/PortoAlegre"
 index_file = "docs/index.html"
 generate_index(summaries_dir, index_file)
