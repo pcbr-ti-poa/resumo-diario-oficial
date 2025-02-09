@@ -1,21 +1,39 @@
-import os
-from scrapers.PortoAlegreScraper import PortoAlegreScraper
-from scrapers.BaseScraper import NoPdfFoundError, DeepSeekAPIError
+import pytz
+from datetime import datetime
+from config import settings
+from core.exceptions import PDFNotFoundError, APIError
+from core.summary_providers import OpenAiProvider
+from scrapers.porto_alegre import PortoAlegreScraper
+from utils.file_io import save_summary
+from utils.mkdocs_helper import update_index
 
-if __name__ == "__main__":
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("API key not found. Please set the OPENAI_API_KEY environment variable.")
-    scraper = PortoAlegreScraper(api_key)
+
+def main():
     try:
-        success = scraper.run()
+        # Initialize dependencies
+        summary_provider = OpenAiProvider(settings.Settings.OPENAI_API_KEY)
+        tz = pytz.timezone(settings.Settings.TIMEZONE)
+
+        # Configure and run scraper
+        scraper = PortoAlegreScraper(summary_provider, tz)
+        target_date = datetime.now(tz).date()
+        summary = scraper.run(target_date)
+
+        # Save results and update documentation
+        save_summary(summary, "porto_alegre", target_date)
+        update_index()
+
         print("Successfully processed Porto Alegre gazette")
-    except NoPdfFoundError as e:
+
+    except PDFNotFoundError as e:
         print(f"⚠️  Warning: {str(e)}")
-        exit(0)
-    except DeepSeekAPIError as e:
+    except APIError as e:
         print(f"❌ Critical API error: {str(e)}")
         exit(1)
     except Exception as e:
         print(f"❌ Unexpected error: {str(e)}")
         exit(1)
+
+
+if __name__ == "__main__":
+    main()
