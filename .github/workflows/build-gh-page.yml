@@ -1,6 +1,7 @@
 name: Build Site from MkDocs
 
 on:
+  workflow_dispatch:  # Allows manual triggering
   push:
     branches:
       - main
