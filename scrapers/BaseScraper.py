@@ -1,6 +1,5 @@
 import os
 import requests
-from datetime import datetime
 from io import BytesIO
 from pypdf import PdfReader
 from dotenv import load_dotenv
