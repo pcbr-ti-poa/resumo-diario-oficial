@@ -8,6 +8,9 @@ on:
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Allows push access
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
