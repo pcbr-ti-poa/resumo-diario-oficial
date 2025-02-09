@@ -26,7 +26,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          python your_script.py
+          python main.py
 
       - name: Generate mkdocs
         run: |
