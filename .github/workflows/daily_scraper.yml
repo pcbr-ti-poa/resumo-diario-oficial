@@ -10,10 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Allows push access
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}  # Uses PAT instead of default token
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -41,4 +43,4 @@ jobs:
           git config --global user.email "actions@github.com"
           git add .
           git commit -m "Automated update of summaries and index page" || echo "No changes to commit"
-          git push
+          git push origin main  # Push with PAT
