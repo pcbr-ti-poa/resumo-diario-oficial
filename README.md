@@ -58,9 +58,39 @@ python -m utils.mkdocs_helper
 └── main.py          # Ponto de entrada
 ```
 
-## Contribuição
+## Como Contribuir
 
-1. Crie novo coletor em `scrapers/`
-2. Adicione URL base em `config/settings.py`
-3. Implemente a interface BaseScraper
-4. Envie um pull request
+Para adicionar suporte a uma nova cidade:
+
+1. **Criar novo coletor** no diretório `scrapers/`:
+   ```python
+   # scrapers/nova_cidade.py
+   from core.base_scraper import BaseScraper
+   from core.exceptions import PDFNotFoundError
+
+   class NovaCidadeScraper(BaseScraper):
+       INSTRUCOES_PERSONALIZADAS = "Instruções específicas para análise desta cidade..."
+       
+       def __init__(self, summary_provider, timezone):
+           super().__init__(summary_provider, timezone)
+           self.base_url = "<URL_DA_PREFEITURA_LOCAL>"
+
+       def find_pdf_urls(self, target_date):
+           # Implementar lógica específica de busca
+           pass
+   ```
+
+2. **Adicionar URL base** no `config/settings.py`:
+   ```python
+   BASE_URLS = {
+       "porto_alegre": "https://www2.portoalegre.rs.gov.br/dopa/",
+       "nova_cidade": "<URL_DA_NOVA_CIDADE>"
+   }
+   ```
+
+3. **Atualizar o main.py** para reconhecer a nova cidade:
+
+4. **Enviar pull request** contendo:
+   - Novo arquivo do coletor
+   - Atualização do settings.py
+   - Modificações no main.py
