@@ -1,8 +1,11 @@
 name: build site from mkdocs
 on:
+  workflow_dispatch:  # Allows manual triggering
   push:
     branches:
       - main
+    paths:
+      - 'docs/**'  # Trigger only if changes are made inside /docs
 jobs:
   build:
     name: Deploy docs
