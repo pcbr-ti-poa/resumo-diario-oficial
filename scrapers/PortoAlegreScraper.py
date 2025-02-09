@@ -118,7 +118,7 @@ class PortoAlegreScraper(BaseScraper):
 
     def run(self):
         pages = []
-        date = datetime(2025, 2, 7).date()
+        date = datetime.today().date()
         """Main execution flow using the OpenAI API for summarization"""
         try:
             pdf_urls = self.find_pdf_urls(date)
