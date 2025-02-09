@@ -1,6 +1,6 @@
-name: build site from mkdocs
+name: Build Site from MkDocs
+
 on:
-  workflow_dispatch:  # Allows manual triggering
   push:
     branches:
       - main
@@ -10,9 +10,16 @@ jobs:
   build:
     name: Deploy docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Allow push access
+      pages: write      # Allow GitHub Pages deployment
+      id-token: write   # Required for secure authentication
+
     steps:
       - name: Checkout main
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use default token
 
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
