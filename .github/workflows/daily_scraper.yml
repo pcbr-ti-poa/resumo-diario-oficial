@@ -3,7 +3,7 @@ name: Run Porto Alegre Scraper
 on:
   workflow_dispatch:  # Allows manual triggering
   schedule:
-    - cron: '0 15 * * *'  # Runs daily at 02:00 UTC (23:00 Brazilian time)
+    - cron: '0 19 * * *'
 
 jobs:
   run-scraper:
