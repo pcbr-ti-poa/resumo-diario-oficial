@@ -2,6 +2,8 @@
 
 Sistema automático para coleta, processamento e resumo de diários oficiais do governo de Porto Alegre.
 
+https://pcbr-ti-poa.github.io/resumo-diario-oficial/
+
 ## Funcionalidades
 
 - **Coleta de PDFs**: Descoberta automática de diários diários
